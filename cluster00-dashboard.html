@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cluster 00 Pool Token Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Header */
+    .header h1 {
+      font-size: 30px;
+      font-weight: 700;
+      background: linear-gradient(to right, #22c55e, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p { color: #94a3b8; margin-top: 12px; line-height: 1.6; max-width: 800px; }
+
+    /* Hero APR Cards - Two side by side */
+    .apr-hero-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin: 32px 0 24px;
+    }
+    .apr-hero {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.05));
+      border: 2px solid rgba(34, 197, 94, 0.4);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+    }
+    .apr-hero.primary {
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    .apr-hero.secondary {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05));
+      border: 2px solid rgba(59, 130, 246, 0.4);
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.5); }
+    }
+    .apr-hero .label {
+      color: #86efac;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+    .apr-hero.secondary .label {
+      color: #93c5fd;
+    }
+    .apr-hero .value {
+      font-size: 56px;
+      font-weight: 800;
+      color: #22c55e;
+      line-height: 1;
+    }
+    .apr-hero.secondary .value {
+      color: #60a5fa;
+    }
+    .apr-hero .subtitle {
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* Pool Value Cards - 1x2 Grid */
+    .pool-value-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .pool-value-card {
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.05));
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .pool-value-card.nav {
+      background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05));
+      border: 1px solid rgba(139,92,246,0.3);
+    }
+    .pool-value-card .label { color: #94a3b8; font-size: 14px; font-weight: 500; }
+    .pool-value-card .value { font-size: 32px; font-weight: 700; margin-top: 4px; }
+    .pool-value-card .subtitle { color: #64748b; font-size: 12px; margin-top: 4px; }
+
+    /* Summary Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card.green { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05)); border: 1px solid rgba(16,185,129,0.3); }
+    .card.purple { background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05)); border: 1px solid rgba(139,92,246,0.3); }
+    .card.amber { background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.05)); border: 1px solid rgba(245,158,11,0.3); }
+    .card.blue { background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.05)); border: 1px solid rgba(59,130,246,0.3); }
+    .card .card-label { color: #94a3b8; font-size: 14px; font-weight: 500; }
+    .card .card-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .card .card-subtitle { color: #64748b; font-size: 12px; margin-top: 4px; }
+
+    /* Charts Section */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .chart-card {
+      background: rgba(30,41,59,0.5);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #334155;
+    }
+    .chart-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #e2e8f0;
+    }
+    .chart-container { position: relative; height: 300px; }
+
+    /* Treemap Visualization */
+    .treemap-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .treemap-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      min-height: 250px;
+      align-content: flex-start;
+    }
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 0;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
+    .treemap-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+      position: relative;
+    }
+    .treemap-item:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+    .treemap-item .gpu-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .treemap-item .gpu-apr {
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .treemap-item .gpu-value {
+      font-size: 10px;
+      color: rgba(255,255,255,0.8);
+      margin-top: 2px;
+    }
+    .treemap-item.small .gpu-name { font-size: 10px; }
+    .treemap-item.small .gpu-apr { font-size: 12px; }
+    .treemap-item.small .gpu-value { display: none; }
+    .treemap-item.tiny .gpu-name { font-size: 8px; }
+    .treemap-item.tiny .gpu-apr { font-size: 10px; }
+    .treemap-item.tiny .gpu-value { display: none; }
+
+    /* Revenue Trend */
+    .revenue-chart { height: 200px; }
+
+    /* Server Table */
+    .table-card {
+      background: rgba(30,41,59,0.5);
+      border-radius: 12px;
+      border: 1px solid #334155;
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 20px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .table-header h3 { font-size: 18px; font-weight: 600; color: #e2e8f0; }
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #334155;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .filter-select {
+      background: #334155;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: white;
+      font-size: 14px;
+    }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; font-size: 14px; border-collapse: collapse; }
+    thead { background: rgba(15,23,42,0.5); }
+    th {
+      text-align: left;
+      padding: 16px;
+      font-weight: 500;
+      color: #94a3b8;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover { color: #e2e8f0; }
+    th.right, td.right { text-align: right; }
+    tbody tr { border-top: 1px solid rgba(51,65,85,0.5); }
+    tbody tr:hover { background: rgba(51,65,85,0.3); }
+    td { padding: 16px; }
+    .server-info { display: flex; align-items: center; gap: 12px; }
+    .server-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .server-id { font-family: monospace; color: #e2e8f0; }
+    .server-gpus { font-size: 12px; color: #64748b; }
+    .gpu-badge {
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .positive { color: #34d399; }
+    .negative { color: #f87171; }
+    .apr-high { color: #34d399; font-weight: 700; }
+    .apr-mid { color: #60a5fa; font-weight: 700; }
+    .apr-low { color: #fbbf24; font-weight: 700; }
+    .apr-neg { color: #f87171; font-weight: 700; }
+    .table-footer {
+      padding: 16px;
+      border-top: 1px solid #334155;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .note { font-size: 12px; margin-top: 4px; color: #475569; }
+
+    @media (max-width: 1100px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .apr-hero-grid { grid-template-columns: 1fr; }
+      .pool-value-grid { grid-template-columns: 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .apr-hero .value { font-size: 44px; }
+      .pool-value-card .value { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Cluster 00: Founding Infrastructure</h1>
+      <p>$4.1M in GPU servers with 8 months of verified performance data. These assets — deployed across FarmGPU and RunPod Secure Cloud — established the operational foundation for our tokenized pool model.</p>
+    </div>
+
+    <!-- Hero APR Cards - Two metrics side by side -->
+    <div class="apr-hero-grid">
+      <div class="apr-hero primary">
+        <div class="label">All-Time Return to Date</div>
+        <div class="value" id="alltime-return">--</div>
+        <div class="subtitle">Avg <span id="weighted-months">--</span> months of revenue history</div>
+      </div>
+      <div class="apr-hero secondary">
+        <div class="label">Current Annualized Return</div>
+        <div class="value" id="annualized-apr">--</div>
+        <div class="subtitle">Based on avg monthly net × 12</div>
+      </div>
+    </div>
+
+    <!-- Pool Value Cards - 1x2 Grid -->
+    <div class="pool-value-grid">
+      <div class="pool-value-card">
+        <div class="label">Total Capex</div>
+        <div class="value" id="total-capex">--</div>
+        <div class="subtitle"><span id="server-count">--</span> servers · <span id="total-gpus">--</span> GPUs</div>
+      </div>
+      <div class="pool-value-card nav">
+        <div class="label">Current NAV (After Depreciation)</div>
+        <div class="value" id="current-nav">--</div>
+        <div class="subtitle" id="nav-pct">--% of original capex</div>
+      </div>
+    </div>
+
+    <!-- Summary Cards - 2x2 Grid -->
+    <div class="cards-grid">
+      <div class="card green">
+        <div class="card-label">Total Returns to Date (Total USDC into Pool)</div>
+        <div class="card-value" id="total-returns">--</div>
+        <div class="card-subtitle">Net of all expenses</div>
+      </div>
+      <div class="card amber">
+        <div class="card-label">Profitable Servers</div>
+        <div class="card-value" id="profitable-servers">--</div>
+        <div class="card-subtitle" id="profitable-pct">--% generating positive returns</div>
+      </div>
+      <div class="card blue">
+        <div class="card-label">Gross Revenue (Monthly)</div>
+        <div class="card-value" id="gross-revenue">--</div>
+        <div class="card-subtitle">Before deductions</div>
+      </div>
+      <div class="card purple">
+        <div class="card-label">Monthly Net Return (USDC into Pool)</div>
+        <div class="card-value" id="monthly-return">--</div>
+        <div class="card-subtitle">Average monthly after all expenses</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>APR by GPU Type (Weighted)</h3>
+        <div class="chart-container">
+          <canvas id="apr-chart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Pool Allocation - Performance Heatmap</h3>
+        <div class="treemap-wrapper">
+          <div id="treemap-viz" class="treemap-container"></div>
+          <div class="heatmap-legend">
+            <div class="legend-item"><div class="legend-color" style="background:#00873c;"></div>40%+</div>
+            <div class="legend-item"><div class="legend-color" style="background:#30a14e;"></div>25-40%</div>
+            <div class="legend-item"><div class="legend-color" style="background:#40c463;"></div>15-25%</div>
+            <div class="legend-item"><div class="legend-color" style="background:#9be9a8;"></div>10-15%</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ffeb3b;"></div>5-10%</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ff9800;"></div>0-5%</div>
+            <div class="legend-item"><div class="legend-color" style="background:#d32f2f;"></div>&lt;0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Trend -->
+    <div class="chart-card" style="margin-bottom: 32px;">
+      <h3>Pool Revenue Trend (Last 3 Months)</h3>
+      <div class="chart-container revenue-chart">
+        <canvas id="revenue-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Server Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Individual Server Performance</h3>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button class="filter-btn" onclick="toggleFilters()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filters
+          </button>
+          <select class="filter-select" id="gpu-filter" style="display: none;" onchange="filterTable()">
+            <option value="all">All GPU Types</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('id')">Server</th>
+              <th onclick="sortTable('gpuModel')">GPU Model</th>
+              <th class="right" onclick="sortTable('serverCost')">Server Cost</th>
+              <th class="right" onclick="sortTable('poolNetReturn')">Monthly Net</th>
+              <th class="right" onclick="sortTable('totalReturnDollars')">Total Returns</th>
+              <th class="right" onclick="sortTable('apr')">APR</th>
+            </tr>
+          </thead>
+          <tbody id="server-table-body"></tbody>
+        </table>
+      </div>
+      <div class="table-footer" id="table-footer">Showing -- of -- servers</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Cluster 00: Founding Infrastructure · Data as of January 2026</p>
+    </div>
+  </div>
+
+  <script>
+    // Updated server data from Excel (with corrected B200 opex of $1,500)
+    const serverData = [
+      { id: "eb965d84", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 13085.46, dec: 12100.32, jan: 10487.56, avgGrossRevenue: 35118.84, poolNetReturn: 12730.04, apr: 44.93, totalReturnDollars: 79039.99 },
+      { id: "feab7ebe", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 7438.87, dec: 7730.04, jan: 9738.12, avgGrossRevenue: 28459.06, poolNetReturn: 8867.37, apr: 31.30, totalReturnDollars: 55056.92 },
+      { id: "1e98e1f9", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 6360.61, dec: 12607.07, jan: 11373.55, avgGrossRevenue: 25052.16, poolNetReturn: 6891.36, apr: 24.32, totalReturnDollars: 42561.63 },
+      { id: "83b4eed9", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 8605.71, dec: 10093.00, jan: 12828.13, avgGrossRevenue: 24135.74, poolNetReturn: 6359.84, apr: 22.45, totalReturnDollars: 39487.86 },
+      { id: "9241464e", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 5205.36, dec: 7582.00, jan: 12635.32, avgGrossRevenue: 22185.58, poolNetReturn: 5228.75, apr: 18.45, totalReturnDollars: 32464.94 },
+      { id: "1a426e51", gpuModel: "B200", gpus: 8, serverCost: 340000, nov: 4351.25, dec: 11981.43, jan: 10216.00, avgGrossRevenue: 21867.67, poolNetReturn: 5044.36, apr: 17.80, totalReturnDollars: 31320.09 },
+      { id: "40c3a78d", gpuModel: "H100-SXM", gpus: 8, serverCost: 250000, nov: 8479.95, dec: 8478.50, jan: 8594.52, avgGrossRevenue: 13565.33, poolNetReturn: 2354.00, apr: 11.30, totalReturnDollars: 31474.32 },
+      { id: "87f1aa91", gpuModel: "H200-PCIe", gpus: 8, serverCost: 240000, nov: 11136.01, dec: 10134.40, jan: 11137.37, avgGrossRevenue: 17584.59, poolNetReturn: 4865.73, apr: 24.33, totalReturnDollars: 43797.98 },
+      { id: "15f5a35b", gpuModel: "H200-PCIe", gpus: 8, serverCost: 240000, nov: 10135.72, dec: 10969.25, jan: 11170.01, avgGrossRevenue: 17501.60, poolNetReturn: 4817.59, apr: 24.09, totalReturnDollars: 43364.67 },
+      { id: "7d6bf3f0", gpuModel: "H200-PCIe", gpus: 8, serverCost: 240000, nov: 9489.11, dec: 9633.66, jan: 10135.26, avgGrossRevenue: 16833.17, poolNetReturn: 4429.91, apr: 22.15, totalReturnDollars: 40020.52 },
+      { id: "536ce9a7", gpuModel: "H200-PCIe", gpus: 8, serverCost: 240000, nov: 8550.11, dec: 9790.95, jan: 10397.44, avgGrossRevenue: 16270.50, poolNetReturn: 4103.56, apr: 20.52, totalReturnDollars: 36937.43 },
+      { id: "eeb616e3", gpuModel: "H100-NVL", gpus: 8, serverCost: 220000, nov: 8316.31, dec: 9593.72, jan: 9115.15, avgGrossRevenue: 11600.84, poolNetReturn: 1756.27, apr: 9.58, totalReturnDollars: 29309.58 },
+      { id: "f4231840", gpuModel: "Pro6000Blackwell", gpus: 7, serverCost: 75000, nov: 5029.52, dec: 4994.36, jan: 4797.23, avgGrossRevenue: 8127.18, poolNetReturn: 2859.60, apr: 45.75, totalReturnDollars: 12306.42 },
+      { id: "48390e7f", gpuModel: "6000Ada", gpus: 8, serverCost: 65800, nov: 2488.81, dec: 2550.01, jan: 2598.66, avgGrossRevenue: 4309.28, poolNetReturn: 811.32, apr: 14.80, totalReturnDollars: 3491.57 },
+      { id: "badc713c", gpuModel: "6000Ada", gpus: 8, serverCost: 65800, nov: 2447.91, dec: 2558.43, jan: 2523.63, avgGrossRevenue: 4252.13, poolNetReturn: 778.18, apr: 14.19, totalReturnDollars: 4115.86 },
+      { id: "a0d4f373", gpuModel: "A100-SXM", gpus: 8, serverCost: 55000, nov: 2745.11, dec: 4737.65, jan: 4906.11, avgGrossRevenue: 7457.95, poolNetReturn: 2832.55, apr: 61.80, totalReturnDollars: 12190.03 },
+      { id: "09569ba5", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 978.76, dec: 1074.67, jan: 1088.68, avgGrossRevenue: 2464.85, poolNetReturn: 782.39, apr: 42.68, totalReturnDollars: 7710.80 },
+      { id: "d379762d", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 983.07, dec: 1024.61, jan: 1050.26, avgGrossRevenue: 2337.50, poolNetReturn: 708.53, apr: 38.65, totalReturnDollars: 4026.80 },
+      { id: "c5f1d7c1", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 980.06, dec: 1072.56, jan: 1072.00, avgGrossRevenue: 2324.42, poolNetReturn: 700.94, apr: 38.23, totalReturnDollars: 4259.99 },
+      { id: "13764385", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 1003.53, dec: 1037.36, jan: 851.56, avgGrossRevenue: 2296.31, poolNetReturn: 684.64, apr: 37.34, totalReturnDollars: 3891.01 },
+      { id: "de7dbf19", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 938.61, dec: 1045.52, jan: 961.43, avgGrossRevenue: 2266.08, poolNetReturn: 667.10, apr: 36.39, totalReturnDollars: 3791.35 },
+      { id: "90c8ef02", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 1028.42, dec: 730.40, jan: 671.98, avgGrossRevenue: 2249.09, poolNetReturn: 657.25, apr: 35.85, totalReturnDollars: 3735.35 },
+      { id: "b8a845fd", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 907.08, dec: 733.34, jan: 797.56, avgGrossRevenue: 2162.53, poolNetReturn: 607.04, apr: 33.11, totalReturnDollars: 3689.32 },
+      { id: "7b9559e7", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 809.53, dec: 1050.53, jan: 661.01, avgGrossRevenue: 2084.88, poolNetReturn: 562.01, apr: 30.66, totalReturnDollars: 2418.64 },
+      { id: "07cd2f25", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 727.69, dec: 699.48, jan: 679.02, avgGrossRevenue: 1852.42, poolNetReturn: 427.18, apr: 23.30, totalReturnDollars: 1838.39 },
+      { id: "b03293b8", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 960.90, dec: 720.77, jan: 58.65, avgGrossRevenue: 1673.81, poolNetReturn: 323.59, apr: 17.65, totalReturnDollars: 1966.60 },
+      { id: "42f2ac70", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 713.50, dec: 258.36, jan: 478.95, avgGrossRevenue: 1634.01, poolNetReturn: 300.50, apr: 16.39, totalReturnDollars: 1826.31 },
+      { id: "863510bf", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 967.49, dec: 556.95, jan: 119.86, avgGrossRevenue: 1563.82, poolNetReturn: 259.79, apr: 14.17, totalReturnDollars: 1118.02 },
+      { id: "801bed7f", gpuModel: "5090", gpus: 4, serverCost: 22000, nov: 442.94, dec: 225.26, jan: 169.97, avgGrossRevenue: 1397.59, poolNetReturn: 163.38, apr: 8.91, totalReturnDollars: 928.55 },
+      { id: "da628cd4", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 690.74, dec: 712.80, jan: 712.95, avgGrossRevenue: 1608.49, poolNetReturn: 412.09, apr: 32.97, totalReturnDollars: 7120.84 },
+      { id: "aaf6117c", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 783.16, dec: 837.48, jan: 875.72, avgGrossRevenue: 1604.55, poolNetReturn: 409.81, apr: 32.78, totalReturnDollars: 7081.40 },
+      { id: "84b70582", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 675.00, dec: 714.92, jan: 701.96, avgGrossRevenue: 1564.94, poolNetReturn: 386.83, apr: 30.95, totalReturnDollars: 6684.39 },
+      { id: "0e5db700", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 690.62, dec: 714.83, jan: 728.70, avgGrossRevenue: 1540.38, poolNetReturn: 372.59, apr: 29.81, totalReturnDollars: 6438.31 },
+      { id: "f4739b8a", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 525.25, dec: 677.25, jan: 666.77, avgGrossRevenue: 1474.68, poolNetReturn: 334.48, apr: 26.76, totalReturnDollars: 5735.87 },
+      { id: "ab8867e9", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 482.12, dec: 514.68, jan: 393.73, avgGrossRevenue: 1455.30, poolNetReturn: 323.24, apr: 25.86, totalReturnDollars: 5585.61 },
+      { id: "6c2d00aa", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 657.87, dec: 478.36, jan: 612.13, avgGrossRevenue: 1447.88, poolNetReturn: 318.94, apr: 25.51, totalReturnDollars: 5479.74 },
+      { id: "2e2240eb", gpuModel: "4090", gpus: 4, serverCost: 15000, nov: 477.66, dec: 408.07, jan: 474.62, avgGrossRevenue: 1409.66, poolNetReturn: 296.77, apr: 23.74, totalReturnDollars: 5128.16 },
+    ];
+
+    const gpuColors = {
+      'B200': '#22c55e',
+      'H200-PCIe': '#06b6d4',
+      'H100-SXM': '#3b82f6',
+      'H100-NVL': '#6366f1',
+      'Pro6000Blackwell': '#f59e0b',
+      '6000Ada': '#84cc16',
+      'A100-SXM': '#ec4899',
+      'A6000': '#14b8a6',
+      '5090': '#f97316',
+      '4090': '#ef4444',
+      '4000Ada': '#a855f7',
+      'A5000': '#64748b',
+    };
+
+    // Get color based on APR performance (like stock heatmap)
+    function getHeatmapColor(apr) {
+      if (apr >= 40) return '#00873c'; // Deep green
+      if (apr >= 25) return '#30a14e'; // Green
+      if (apr >= 15) return '#40c463'; // Light green
+      if (apr >= 10) return '#9be9a8'; // Very light green
+      if (apr >= 5) return '#ffeb3b';  // Yellow
+      if (apr >= 0) return '#ff9800';  // Orange
+      return '#d32f2f';  // Red for negative
+    }
+
+    // Formatting
+    const formatCurrency = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+    const formatPercent = (v) => v.toFixed(2) + '%';
+
+    // Values from Excel (with corrected B200 opex of $1,500)
+    const totalCapex = 4137600;  // C41
+    const totalReturnsFromExcel = 627395.24;  // Y41
+    const monthlyNetFromExcel = 84429.52;  // W41
+    const totalDepreciation = 600166;  // Calculated: sum of (monthly depr × months) for each server
+    const currentNav = totalCapex - totalDepreciation;  // $3,537,434
+    const weightedAvgMonths = 8.0;  // Weighted by capex
+
+    // Calculate key metrics
+    const allTimeReturn = (totalReturnsFromExcel / totalCapex) * 100;  // 15.16%
+    const annualizedApr = (monthlyNetFromExcel * 12 / totalCapex) * 100;  // 24.49%
+
+    // Calculate other stats
+    const totalGrossRevenue = serverData.reduce((s, d) => s + d.avgGrossRevenue, 0);
+    const serverCount = serverData.length;
+    const totalGpus = serverData.reduce((s, d) => s + d.gpus, 0);
+    const profitableServers = serverData.filter(d => d.apr > 0).length;
+
+    // Update DOM - Hero cards
+    document.getElementById('alltime-return').textContent = formatPercent(allTimeReturn);
+    document.getElementById('weighted-months').textContent = weightedAvgMonths.toFixed(1);
+    document.getElementById('annualized-apr').textContent = formatPercent(annualizedApr);
+
+    // Update DOM - Pool value cards
+    document.getElementById('total-capex').textContent = formatCurrency(totalCapex);
+    document.getElementById('server-count').textContent = serverCount;
+    document.getElementById('total-gpus').textContent = totalGpus;
+    document.getElementById('current-nav').textContent = formatCurrency(currentNav);
+    document.getElementById('nav-pct').textContent = ((currentNav / totalCapex) * 100).toFixed(1) + '% of original capex';
+
+    // Update DOM - Summary cards
+    document.getElementById('total-returns').textContent = formatCurrency(totalReturnsFromExcel);
+    document.getElementById('monthly-return').textContent = formatCurrency(monthlyNetFromExcel);
+    document.getElementById('profitable-servers').textContent = profitableServers + '/' + serverCount;
+    document.getElementById('profitable-pct').textContent = Math.round((profitableServers / serverCount) * 100) + '% generating positive returns';
+    document.getElementById('gross-revenue').textContent = formatCurrency(totalGrossRevenue);
+
+    // GPU type aggregation
+    const gpuAggregated = {};
+    serverData.forEach(s => {
+      if (!gpuAggregated[s.gpuModel]) {
+        gpuAggregated[s.gpuModel] = { totalCost: 0, weightedApr: 0, count: 0, totalReturns: 0 };
+      }
+      gpuAggregated[s.gpuModel].totalCost += s.serverCost;
+      gpuAggregated[s.gpuModel].weightedApr += s.apr * s.serverCost;
+      gpuAggregated[s.gpuModel].count++;
+      gpuAggregated[s.gpuModel].totalReturns += s.totalReturnDollars;
+    });
+
+    const aprData = Object.entries(gpuAggregated)
+      .map(([name, data]) => ({ name, apr: data.weightedApr / data.totalCost, cost: data.totalCost, returns: data.totalReturns }))
+      .sort((a, b) => b.apr - a.apr);
+
+    // APR Chart
+    new Chart(document.getElementById('apr-chart'), {
+      type: 'bar',
+      data: {
+        labels: aprData.map(d => d.name),
+        datasets: [{
+          data: aprData.map(d => d.apr),
+          backgroundColor: aprData.map(d => gpuColors[d.name] || '#6366f1'),
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => 'APR: ' + formatPercent(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { callback: (v) => v + '%', color: '#94a3b8' },
+            grid: { color: '#334155' }
+          },
+          y: {
+            ticks: { color: '#94a3b8' },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // Treemap-style Heatmap Visualization (like stock market)
+    function createTreemap() {
+      const container = document.getElementById('treemap-viz');
+      const totalValue = aprData.reduce((s, d) => s + d.cost, 0);
+
+      // Sort by value (biggest first)
+      const sortedData = [...aprData].sort((a, b) => b.cost - a.cost);
+
+      // Calculate container dimensions
+      const containerWidth = container.offsetWidth || 600;
+      const containerHeight = 280;
+
+      let html = '';
+
+      sortedData.forEach((item, index) => {
+        const proportion = item.cost / totalValue;
+        // Size based on proportion of pool value
+        const area = proportion * containerWidth * containerHeight;
+        const width = Math.max(Math.sqrt(area * 1.5), 60);
+        const height = Math.max(area / width, 50);
+
+        const color = getHeatmapColor(item.apr);
+        const sizeClass = width < 80 ? 'tiny' : width < 120 ? 'small' : '';
+
+        html += `
+          <div class="treemap-item ${sizeClass}"
+               style="width: ${width}px; height: ${height}px; background-color: ${color};"
+               title="${item.name}: ${formatPercent(item.apr)} APR, ${formatCurrency(item.cost)} invested">
+            <div class="gpu-name">${item.name}</div>
+            <div class="gpu-apr">${item.apr.toFixed(1)}%</div>
+            <div class="gpu-value">${formatCurrency(item.cost)}</div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // Create treemap after a small delay to ensure container is sized
+    setTimeout(createTreemap, 100);
+    window.addEventListener('resize', createTreemap);
+
+    // Revenue Trend Chart
+    const nov = serverData.reduce((s, d) => s + d.nov, 0);
+    const dec = serverData.reduce((s, d) => s + d.dec, 0);
+    const jan = serverData.reduce((s, d) => s + d.jan, 0);
+
+    new Chart(document.getElementById('revenue-chart'), {
+      type: 'line',
+      data: {
+        labels: ['November', 'December', 'January'],
+        datasets: [{
+          data: [nov, dec, jan],
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 6,
+          pointBackgroundColor: '#22c55e',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => 'Revenue: ' + formatCurrency(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { callback: (v) => '$' + (v/1000).toFixed(0) + 'K', color: '#94a3b8' }, grid: { color: '#334155' } }
+        }
+      }
+    });
+
+    // Table
+    let currentSort = { field: 'apr', dir: 'desc' };
+    let currentFilter = 'all';
+    let filteredData = [...serverData];
+
+    function renderTable() {
+      const tbody = document.getElementById('server-table-body');
+      let html = '';
+      filteredData.forEach(s => {
+        const aprClass = s.apr >= 20 ? 'apr-high' : s.apr >= 10 ? 'apr-mid' : s.apr >= 0 ? 'apr-low' : 'apr-neg';
+        const color = gpuColors[s.gpuModel] || '#6366f1';
+        html += `<tr>
+          <td>
+            <div class="server-info">
+              <div class="server-icon" style="background-color: ${color}20; color: ${color};">⬡</div>
+              <div>
+                <div class="server-id">${s.id}</div>
+                <div class="server-gpus">${s.gpus} GPUs</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="gpu-badge" style="background-color: ${color}20; color: ${color};">${s.gpuModel}</span></td>
+          <td class="right">${formatCurrency(s.serverCost)}</td>
+          <td class="right ${s.poolNetReturn >= 0 ? 'positive' : 'negative'}">${formatCurrency(s.poolNetReturn)}</td>
+          <td class="right ${s.totalReturnDollars >= 0 ? 'positive' : 'negative'}">${formatCurrency(s.totalReturnDollars)}</td>
+          <td class="right ${aprClass}">${formatPercent(s.apr)}</td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+      document.getElementById('table-footer').textContent = `Showing ${filteredData.length} of ${serverData.length} servers` + (currentFilter !== 'all' ? ` · Filtered by ${currentFilter}` : '');
+    }
+
+    function sortTable(field) {
+      if (currentSort.field === field) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort.field = field;
+        currentSort.dir = 'desc';
+      }
+      filteredData.sort((a, b) => {
+        const aVal = a[field];
+        const bVal = b[field];
+        if (typeof aVal === 'string') {
+          return currentSort.dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        }
+        return currentSort.dir === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+      renderTable();
+    }
+
+    function toggleFilters() {
+      const select = document.getElementById('gpu-filter');
+      select.style.display = select.style.display === 'none' ? 'inline-block' : 'none';
+    }
+
+    function filterTable() {
+      currentFilter = document.getElementById('gpu-filter').value;
+      filteredData = currentFilter === 'all' ? [...serverData] : serverData.filter(s => s.gpuModel === currentFilter);
+      sortTable(currentSort.field);
+    }
+
+    // Populate filter dropdown
+    const gpuTypes = [...new Set(serverData.map(s => s.gpuModel))].sort();
+    const filterSelect = document.getElementById('gpu-filter');
+    gpuTypes.forEach(gpu => {
+      const opt = document.createElement('option');
+      opt.value = gpu;
+      opt.textContent = gpu;
+      filterSelect.appendChild(opt);
+    });
+
+    // Initial render
+    sortTable('apr');
+  </script>
+</body>
+</html>
